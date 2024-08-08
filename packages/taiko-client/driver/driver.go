@@ -21,6 +21,7 @@ import (
 	"github.com/ethereum/go-ethereum/log"
 	"github.com/urfave/cli/v2"
 
+	"github.com/taikoxyz/taiko-mono/packages/taiko-client/bindings"
 	chainSyncer "github.com/taikoxyz/taiko-mono/packages/taiko-client/driver/chain_syncer"
 	"github.com/taikoxyz/taiko-mono/packages/taiko-client/driver/state"
 	"github.com/taikoxyz/taiko-mono/packages/taiko-client/pkg/rpc"
@@ -44,6 +45,8 @@ type Driver struct {
 
 	ctx context.Context
 	wg  sync.WaitGroup
+
+	blockProposedEventChan chan *bindings.TaikoL1ClientBlockProposed
 }
 
 // InitFromCli initializes the given driver instance based on the command line flags.
@@ -81,6 +84,9 @@ func (d *Driver) InitFromConfig(ctx context.Context, cfg *Config) (err error) {
 		log.Warn("P2P syncing verified blocks enabled, but no connected peer found in L2 execution engine")
 	}
 
+	eventChan := make(chan *bindings.TaikoL1ClientBlockProposed)
+	d.blockProposedEventChan = eventChan
+
 	if d.l2ChainSyncer, err = chainSyncer.New(
 		d.ctx,
 		d.rpc,
@@ -90,6 +96,7 @@ func (d *Driver) InitFromConfig(ctx context.Context, cfg *Config) (err error) {
 		cfg.MaxExponent,
 		cfg.BlobServerEndpoint,
 		cfg.SocialScanEndpoint,
+		eventChan,
 	); err != nil {
 		return err
 	}
@@ -295,6 +302,24 @@ func (p *RPC) AdvanceL2ChainHeadWithNewBlocks(_ *http.Request, args *Args, reply
 	return nil
 }
 
+type RPCReplyBlockProposed struct {
+	BlockID    uint64
+	TxListHash [32]byte
+	Proposer   common.Address
+}
+
+func (p *RPC) WaitForBlockProposed(_ *http.Request, _ *Args, reply *RPCReplyBlockProposed) error {
+	log.Info("Waiting for BlockProposed event")
+	blockProposedEvent := <-p.driver.blockProposedEventChan
+	*reply = RPCReplyBlockProposed{
+		BlockID:    blockProposedEvent.BlockId.Uint64(),
+		TxListHash: blockProposedEvent.Meta.BlobHash,
+		Proposer:   blockProposedEvent.Meta.Sender,
+	}
+	log.Info("BlockProposed event received", "reply", *reply)
+	return nil
+}
+
 const rpcPort = 1235
 
 func (d *Driver) startRPCServer() {
@@ -306,13 +331,13 @@ func (d *Driver) startRPCServer() {
 	}
 
 	http.Handle("/rpc", s)
-	log.Info("Starting JSON-RPC server", "port", rpcPort)
+	log.Info("Starting JSON-RPC server", "port", rpcPort, "writeTimeout", d.RpcWriteTimeout)
 	// Create a custom HTTP server with timeouts
 	server := &http.Server{
 		Addr:         fmt.Sprintf(":%d", rpcPort),
 		Handler:      s,
 		ReadTimeout:  10 * time.Second,
-		WriteTimeout: 10 * time.Second,
+		WriteTimeout: d.RpcWriteTimeout,
 		IdleTimeout:  15 * time.Second,
 	}
 

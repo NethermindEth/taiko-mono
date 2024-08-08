@@ -65,6 +65,7 @@ func (s *EventHandlerTestSuite) SetupTest() {
 		0,
 		nil,
 		nil,
+		nil,
 	)
 	s.Nil(err)
 

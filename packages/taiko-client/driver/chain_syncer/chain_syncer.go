@@ -10,6 +10,7 @@ import (
 	"github.com/ethereum/go-ethereum/eth/downloader"
 	"github.com/ethereum/go-ethereum/log"
 
+	"github.com/taikoxyz/taiko-mono/packages/taiko-client/bindings"
 	"github.com/taikoxyz/taiko-mono/packages/taiko-client/driver/chain_syncer/beaconsync"
 	"github.com/taikoxyz/taiko-mono/packages/taiko-client/driver/chain_syncer/blob"
 	"github.com/taikoxyz/taiko-mono/packages/taiko-client/driver/state"
@@ -48,6 +49,7 @@ func New(
 	maxRetrieveExponent uint64,
 	blobServerEndpoint *url.URL,
 	socialScanEndpoint *url.URL,
+	blockProposedEventChan chan *bindings.TaikoL1ClientBlockProposed,
 ) (*L2ChainSyncer, error) {
 	tracker := beaconsync.NewSyncProgressTracker(rpc.L2, p2pSyncTimeout)
 	go tracker.Track(ctx)
@@ -65,6 +67,7 @@ func New(
 		maxRetrieveExponent,
 		blobServerEndpoint,
 		socialScanEndpoint,
+		blockProposedEventChan,
 	)
 	if err != nil {
 		return nil, err

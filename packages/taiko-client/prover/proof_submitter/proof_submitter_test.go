@@ -116,6 +116,7 @@ func (s *ProofSubmitterTestSuite) SetupTest() {
 		0,
 		nil,
 		nil,
+		nil,
 	)
 	s.Nil(err)
 

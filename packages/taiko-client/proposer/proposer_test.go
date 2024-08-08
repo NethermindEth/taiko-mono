@@ -49,6 +49,7 @@ func (s *ProposerTestSuite) SetupTest() {
 		0,
 		nil,
 		nil,
+		nil,
 	)
 	s.Nil(err)
 	s.s = syncer

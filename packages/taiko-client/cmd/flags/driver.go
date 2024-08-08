@@ -52,6 +52,13 @@ var (
 		Category: driverCategory,
 		EnvVars:  []string{"BLOB_SOCIAL_SCAN_ENDPOINT"},
 	}
+	RpcWriteTimeout = &cli.DurationFlag{
+		Name:     "rpc.writeTimeout",
+		Usage:    "HTTP RPC write timeout",
+		Category: driverCategory,
+		Value:    120 * time.Second,
+		EnvVars:  []string{"RPC_WRITE_TIMEOUT"},
+	}
 )
 
 // DriverFlags All driver flags.
@@ -66,4 +73,5 @@ var DriverFlags = MergeFlags(CommonFlags, []cli.Flag{
 	MaxExponent,
 	BlobServerEndpoint,
 	SocialScanEndpoint,
+	RpcWriteTimeout,
 })

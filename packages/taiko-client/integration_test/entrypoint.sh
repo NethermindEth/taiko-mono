@@ -48,6 +48,7 @@ PACKAGE=${PACKAGE:-...}
 # limiting tests to blob syncer for now
 if [ "$RUN_TESTS" == "true" ]; then
     go test -v -p=1  ./driver/chain_syncer/blob -run '^TestBlobSyncerTestSuite$'
+    go test -v -p=1  ./driver -run '^TestDriverTestSuite$'
     # ./"$PACKAGE" -coverprofile=coverage.out -covermode=atomic -timeout=700s
 else
     echo "💻 Local dev net started"

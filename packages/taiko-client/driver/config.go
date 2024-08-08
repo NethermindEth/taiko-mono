@@ -23,6 +23,7 @@ type Config struct {
 	MaxExponent        uint64
 	BlobServerEndpoint *url.URL
 	SocialScanEndpoint *url.URL
+	RpcWriteTimeout    time.Duration
 }
 
 // NewConfigFromCliContext creates a new config instance from
@@ -65,6 +66,7 @@ func NewConfigFromCliContext(c *cli.Context) (*Config, error) {
 	}
 
 	var timeout = c.Duration(flags.RPCTimeout.Name)
+	var rpcWriteTimeout = c.Duration(flags.RpcWriteTimeout.Name)
 	return &Config{
 		ClientConfig: &rpc.ClientConfig{
 			L1Endpoint:       c.String(flags.L1WSEndpoint.Name),
@@ -83,5 +85,6 @@ func NewConfigFromCliContext(c *cli.Context) (*Config, error) {
 		MaxExponent:        c.Uint64(flags.MaxExponent.Name),
 		BlobServerEndpoint: blobServerEndpoint,
 		SocialScanEndpoint: socialScanEndpoint,
+		RpcWriteTimeout:    rpcWriteTimeout,
 	}, nil
 }

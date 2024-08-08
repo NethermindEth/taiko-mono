@@ -47,6 +47,7 @@ func (s *BlobSyncerTestSuite) SetupTest() {
 		0,
 		nil,
 		nil,
+		nil,
 	)
 	s.Nil(err)
 	s.s = syncer
@@ -62,6 +63,7 @@ func (s *BlobSyncerTestSuite) TestCancelNewSyncer() {
 		s.s.state,
 		s.s.progressTracker,
 		0,
+		nil,
 		nil,
 		nil,
 	)

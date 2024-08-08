@@ -44,10 +44,11 @@ type Syncer struct {
 	anchorConstructor  *anchorTxConstructor.AnchorTxConstructor // TaikoL2.anchor transactions constructor
 	txListDecompressor *txListDecompressor.TxListDecompressor   // Transactions list decompressor
 	// Used by BlockInserter
-	lastInsertedBlockID *big.Int
-	reorgDetectedFlag   bool
-	maxRetrieveExponent uint64
-	blobDatasource      *rpc.BlobDataSource
+	lastInsertedBlockID    *big.Int
+	reorgDetectedFlag      bool
+	maxRetrieveExponent    uint64
+	blobDatasource         *rpc.BlobDataSource
+	blockProposedEventChan chan *bindings.TaikoL1ClientBlockProposed
 }
 
 // NewSyncer creates a new syncer instance.
@@ -59,6 +60,7 @@ func NewSyncer(
 	maxRetrieveExponent uint64,
 	blobServerEndpoint *url.URL,
 	socialScanEndpoint *url.URL,
+	blockProposedEventChan chan *bindings.TaikoL1ClientBlockProposed,
 ) (*Syncer, error) {
 	configs, err := client.TaikoL1.GetConfig(&bind.CallOpts{Context: ctx})
 	if err != nil {
@@ -88,6 +90,7 @@ func NewSyncer(
 			blobServerEndpoint,
 			socialScanEndpoint,
 		),
+		blockProposedEventChan: blockProposedEventChan,
 	}, nil
 }
 
@@ -161,6 +164,10 @@ func (s *Syncer) processL1Blocks(ctx context.Context) error {
 	return nil
 }
 
+func (s *Syncer) BlockProposedTestWrapper(ctx context.Context, event *bindings.TaikoL1ClientBlockProposed) error {
+	return s.onBlockProposed(ctx, event, nil)
+}
+
 // OnBlockProposed is a `BlockProposed` event callback which responsible for
 // inserting the proposed block one by one to the L2 execution engine.
 func (s *Syncer) onBlockProposed(
@@ -169,6 +176,8 @@ func (s *Syncer) onBlockProposed(
 	endIter eventIterator.EndBlockProposedEventIterFunc,
 ) error {
 	log.Info("onBlockProposed", "blockID", event.BlockId)
+
+	s.blockProposedEventChan <- event
 
 	// We simply ignore the genesis block's `BlockProposed` event.
 	if event.BlockId.Cmp(common.Big0) == 0 {

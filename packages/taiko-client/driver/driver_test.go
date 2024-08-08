@@ -12,6 +12,7 @@ import (
 	"github.com/ethereum/go-ethereum/crypto"
 	"github.com/stretchr/testify/suite"
 
+	"github.com/taikoxyz/taiko-mono/packages/taiko-client/bindings"
 	"github.com/taikoxyz/taiko-mono/packages/taiko-client/bindings/encoding"
 	"github.com/taikoxyz/taiko-mono/packages/taiko-client/internal/testutils"
 	"github.com/taikoxyz/taiko-mono/packages/taiko-client/pkg/jwt"
@@ -288,6 +289,43 @@ func (s *DriverTestSuite) TestL1Current() {
 	s.ProposeAndInsertEmptyBlocks(s.p, s.d.ChainSyncer().BlobSyncer())
 	// reset L1 current with increased height
 	s.Nil(s.d.state.ResetL1Current(s.d.ctx, common.Big1))
+}
+
+func (s *DriverTestSuite) TestWaitForBlockProposed() {
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+
+	driverRPC := &RPC{driver: s.d}
+	rpcReply := &RPCReplyBlockProposed{}
+	blockProposedHandled := false
+
+	// Run WaitForBlockProposed in a separate goroutine
+	go func() {
+		err := driverRPC.WaitForBlockProposed(nil, nil, rpcReply)
+		s.Nil(err)
+		blockProposedHandled = true
+	}()
+
+	// Simulate blockProposed event
+	time.Sleep(100 * time.Millisecond) // Ensure WaitForBlockProposed is waiting
+	blockProposedEvent := &bindings.TaikoL1ClientBlockProposed{
+		BlockId: common.Big1,
+		Meta: bindings.TaikoDataBlockMetadata{
+			Id:         1,
+			L1Height:   1,
+			L1Hash:     common.HexToHash("0x1"),
+			Coinbase:   common.HexToAddress("0x1"),
+			BlobHash:   common.HexToHash("0x1"),
+			Difficulty: common.HexToHash("0x1"),
+			GasLimit:   21000,
+			Timestamp:  uint64(time.Now().Unix()),
+		},
+	}
+	_ = s.d.ChainSyncer().BlobSyncer().BlockProposedTestWrapper(ctx, blockProposedEvent)
+
+	// Wait for a short period to ensure the event is processed
+	time.Sleep(100 * time.Millisecond)
+	s.True(blockProposedHandled)
 }
 
 func (s *DriverTestSuite) InitProposer() {
